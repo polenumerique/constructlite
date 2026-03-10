@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>ConstructLite</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body oncontextmenu="return false">
+
+<!-- ================================================================
+     TOPBAR
+================================================================ -->
+<div id="topbar">
+  <div class="logo">Construct<em>Lite</em></div>
+  <div class="sep"></div>
+  <button class="tb" onclick="newProject()">📄 Nouveau</button>
+  <button class="tb" onclick="saveProject()">💾 Sauvegarder</button>
+  <button class="tb" onclick="loadProject()">📂 Ouvrir</button>
+  <div class="sep"></div>
+  <button class="tb" onclick="addVar()">📊 Variable</button>
+  <button class="tb" onclick="addTmr()">⏱ Timer</button>
+  <div class="sp"></div>
+  <button class="tb run" onclick="runGame()">▶ Lancer</button>
+  <button class="tb" onclick="toggleTheme()">🌙 / ☀️ Thème</button>
+</div>
+
+<!-- ONGLETS PRINCIPAUX -->
+<div id="mtabs">
+  <div class="mtab on" id="mt-ed" onclick="switchTab('ed')">🖊 Éditeur de Scène</div>
+  <div class="mtab"    id="mt-ev" onclick="switchTab('ev')">⚡ Codage Visuel</div>
+</div>
+
+<div id="body">
+
+<!-- ================================================================
+     ONGLET 1 — ÉDITEUR
+================================================================ -->
+<div id="t-ed">
+
+  <!-- Panel gauche : hiérarchie de scène -->
+  <div id="scene-panel">
+    <div class="phead">Scène</div>
+    <div id="scene-list"></div>
+
+    <div class="ss">
+      <div class="ssh op" id="ssh-v" onclick="togSS('v')">
+        Variables <span class="ph-add" onclick="event.stopPropagation();addVar()">+</span>
+        <span class="arr">▾</span>
+      </div>
+      <div class="ssb" id="ssb-v"></div>
+    </div>
+
+    <div class="ss">
+      <div class="ssh op" id="ssh-t" onclick="togSS('t')">
+        Timers <span class="ph-add" onclick="event.stopPropagation();addTmr()">+</span>
+        <span class="arr">▾</span>
+      </div>
+      <div class="ssb" id="ssb-t"></div>
+    </div>
+  </div>
+
+  <!-- Canvas central -->
+  <div id="cvswrap"
+    onmousedown="cvDown(event)"
+    onmousemove="cvMove(event)"
+    onmouseup="cvUp(event)"
+    oncontextmenu="cvCtx(event)"
+    ondblclick="cvDblClick(event)">
+    <canvas id="gcvs" width="800" height="500"></canvas>
+    <div id="grid-bar">
+      <button id="grid-toggle-btn" class="gb" onclick="toggleGrid()" title="Activer/désactiver la grille">≡ Grille</button>
+      <input id="grid-size-inp" type="number" min="4" max="256" value="32" title="Taille de la grille (px)" onchange="setGridSize(this.value)">
+      <span class="gb-label">px</span>
+      <label class="gb-snap"><input type="checkbox" id="grid-snap-chk" checked disabled onchange="toggleSnap(this.checked)"> Snap</label>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 2px"></div>
+      <button class="gb" onclick="setCvZoom(cvZoom/1.25)" title="Dézoomer">−</button>
+      <span id="zoom-lbl" onclick="setCvZoom(1)" title="Réinitialiser le zoom" style="font-size:10px;color:var(--dim);min-width:34px;text-align:center;cursor:pointer;user-select:none">100%</span>
+      <button class="gb" onclick="setCvZoom(cvZoom*1.25)" title="Zoomer">+</button>
+    </div>
+    <div id="canvas-hint" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--dim);pointer-events:none;background:rgba(13,15,20,.8);padding:4px 10px;border-radius:4px;border:1px solid var(--border);">
+      Double-clic → ajouter un objet · Clic droit → options
+    </div>
+  </div>
+
+  <!-- Panel droit : Propriétés / Bibliothèque / Behaviors -->
+  <div id="right-panel">
+    <div id="rpanel-tabs">
+      <div class="rptab on" id="rp-props" onclick="switchRP('props')">Propriétés</div>
+      <div class="rptab"    id="rp-lib"   onclick="switchRP('lib')">Bibliothèque</div>
+      <div class="rptab"    id="rp-beh"   onclick="switchRP('beh')">Behaviors</div>
+    </div>
+
+    <!-- Propriétés -->
+    <div class="rpbody on" id="rp-props-body">
+      <div class="pempty">Sélectionnez un objet pour voir ses propriétés.</div>
+    </div>
+
+    <!-- Bibliothèque -->
+    <div class="rpbody" id="rp-lib-body">
+      <div id="lib-panel">
+        <div class="lib-grid">
+          <div class="lib-item" onclick="addFromLib('sprite')" draggable="true" ondragstart="libDragStart('sprite')">
+            <div class="lib-icon">🖼</div><div class="lib-name">Sprite</div><div class="lib-desc">Image animable</div>
+          </div>
+          <div class="lib-item" onclick="addFromLib('button')" draggable="true" ondragstart="libDragStart('button')">
+            <div class="lib-icon">🔲</div><div class="lib-name">Bouton</div><div class="lib-desc">UI cliquable</div>
+          </div>
+          <div class="lib-item" onclick="addFromLib('label')" draggable="true" ondragstart="libDragStart('label')">
+            <div class="lib-icon">🔤</div><div class="lib-name">Label</div><div class="lib-desc">Texte dynamique</div>
+          </div>
+          <div class="lib-item" onclick="addFromLib('textedit')" draggable="true" ondragstart="libDragStart('textedit')">
+            <div class="lib-icon">⌨️</div><div class="lib-name">TextEdit</div><div class="lib-desc">Champ de saisie</div>
+          </div>
+        </div>
+        <div class="lib-drag-hint">💡 Glissez sur le canvas ou cliquez pour créer un <b>nouveau type</b>.</div>
+      </div>
+
+      <div style="padding:8px 8px 4px;font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.05em;text-transform:uppercase;">Types définis</div>
+      <div style="padding:0 6px 6px;font-size:9px;color:var(--dim);">Glissez sur le canvas → nouvelle instance · <b>Ctrl+drag</b> sur un objet dans la scène</div>
+      <div id="lib-types-list" style="padding:0 6px 8px;"></div>
+    </div>
+
+    <!-- Behaviors -->
+    <div class="rpbody" id="rp-beh-body">
+      <div id="beh-panel">
+        <div id="beh-no-sel" class="beh-empty">
+          Sélectionnez un objet dans la scène pour lui ajouter des <b>Behaviors</b>.<br><br>
+          Les Behaviors ajoutent de la logique sans écrire de code.
+        </div>
+        <div id="beh-content" style="display:none;">
+          <div style="padding:4px 0 8px;font-size:10px;color:var(--dim);" id="beh-obj-label">Aucun objet sélectionné</div>
+          <button class="beh-add-btn" onclick="openBehPicker()">+ Ajouter un Behavior</button>
+          <div id="beh-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /right-panel -->
+</div><!-- /t-ed -->
+
+<!-- ================================================================
+     ONGLET 2 — CODAGE VISUEL
+================================================================ -->
+<div id="t-ev">
+  <div id="evbar">
+    <span id="evbartitle">⚡ Feuille d'Événements</span>
+    <div class="sp"></div>
+    <button class="tb" onclick="addStartEv()" style="border-color:var(--accent3);color:var(--accent3)">🟢 On Start</button>
+    <button class="tb" onclick="addEv()">+ Événement</button>
+    <button class="tb" onclick="addGroup()" style="border-color:var(--accent5);color:var(--accent5)">📁 Groupe</button>
+    <button class="tb" style="border-color:var(--red);color:var(--red)" onclick="clearEvs()">🗑 Vider</button>
+  </div>
+  <div id="ev-list" oncontextmenu="event.preventDefault()"></div>
+</div>
+
+</div><!-- /body -->
+
+<!-- STATUSBAR -->
+<div id="status">
+  Objets: <span id="s-obj">0</span>
+  &nbsp;|&nbsp; Sélection: <span id="s-sel">—</span>
+</div>
+
+<!-- ================================================================
+     ÉDITEUR PIXEL ART
+================================================================ -->
+<div id="mbg" onclick="closePx()"></div>
+<div id="pxmod">
+
+  <!-- Header -->
+  <div class="pmh">
+    <span class="pmtitle">🎨 Éditeur Pixel Art</span>
+    <div style="font-size:11px;color:var(--dim);display:flex;align-items:center;gap:6px;">
+      Taille :
+      <select id="pesize" onchange="resizePe()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:11px;border-radius:3px;padding:2px 5px;">
+        <option value="16">16×16</option>
+        <option value="32" selected>32×32</option>
+        <option value="48">48×48</option>
+        <option value="64">64×64</option>
+      </select>
+    </div>
+    <button class="tb" onclick="clearPe()" title="Effacer la frame">🗑 Effacer</button>
+    <button class="tb" onclick="undoPe()"  title="Annuler (Ctrl+Z)">↩ Undo</button>
+    <div style="display:flex;gap:3px;border-left:1px solid var(--border);padding-left:8px;margin-left:2px;">
+      <button id="pe-mode-draw" class="tb on" onclick="switchPeMode('draw')"      title="Mode dessin">✏️ Dessin</button>
+      <button id="pe-mode-coll" class="tb"    onclick="switchPeMode('collision')"  title="Zone de collision">🔷 Collision</button>
+    </div>
+    <span class="pmclose" onclick="closePx()">✕</span>
+  </div>
+
+  <!-- Corps : outils | zone centrale | panneau droite -->
+  <div class="pmbody">
+
+    <!-- Colonne outils -->
+    <div class="pmtls">
+      <button class="ptl on" id="ptl-pencil"  onclick="setTool('pencil')"  title="Crayon [P]">✏️</button>
+      <button class="ptl"    id="ptl-eraser"  onclick="setTool('eraser')"  title="Gomme [E]">🧹</button>
+      <button class="ptl"    id="ptl-fill"    onclick="setTool('fill')"    title="Remplir [F]">🪣</button>
+      <button class="ptl"    id="ptl-eyedrop" onclick="setTool('eyedrop')" title="Pipette [I]">💉</button>
+      <button class="ptl"    id="ptl-rect"    onclick="setTool('rect')"    title="Rectangle [R]">⬜</button>
+      <button class="ptl"    id="ptl-line"    onclick="setTool('line')"    title="Ligne [L]">📏</button>
+    </div>
+
+    <!-- Zone centrale : canvas de dessin + bande de frames en bas -->
+    <div class="pm-center">
+
+      <!-- Canvas de dessin -->
+      <div class="pmca">
+        <canvas id="pecanvas"></canvas>
+      </div>
+
+      <!-- Bande de frames -->
+      <div class="pm-frames">
+        <div class="pm-frames-label">
+          FRAMES
+          <span id="pe-frame-count">1 / 1</span>
+        </div>
+        <div id="pe-frame-strip">
+          <!-- Rempli dynamiquement par renderFrameStrip() -->
+        </div>
+      </div>
+
+    </div><!-- /pm-center -->
+
+    <!-- Panneau droit : couleur, palette, opacité, anim -->
+    <div class="pmr">
+
+      <div>
+        <div class="pmsec">Couleur</div>
+        <input type="color" id="pecol" value="#5b8fff" oninput="setPeCol(this.value)"
+          style="width:100%;height:28px;border-radius:4px;border:1px solid var(--border);cursor:pointer;">
+      </div>
+
+      <div>
+        <div class="pmsec">Palette</div>
+        <div class="pmpal" id="pepal"></div>
+      </div>
+
+      <div>
+        <div class="pmsec">Taille pinceau <span id="pe-brush-val">1</span>px</div>
+        <input type="range" min="1" max="8" step="1" value="1" id="pe-brush"
+          style="width:100%;" oninput="setPeBrush(+this.value)">
+      </div>
+
+      <div>
+        <div class="pmsec">Opacité</div>
+        <input type="range" min="0" max="1" step=".05" value="1" id="pealpha"
+          style="width:100%;" oninput="peA=+this.value">
+      </div>
+
+      <!-- Panneau collision (mode collision uniquement) -->
+      <div id="pe-coll-panel" style="display:none">
+        <div class="pmsec">Zone de collision</div>
+        <button onclick="collReset()" class="btn" style="width:100%;font-size:11px;margin-bottom:5px;">⬜ Bounding box</button>
+        <button onclick="collResetImage()" class="btn" style="width:100%;font-size:11px;margin-bottom:8px;">🖼 Depuis l'image</button>
+        <div style="font-size:9px;color:var(--dim);line-height:1.8;padding:0 2px">
+          <b>Clic</b> : ajouter un point<br>
+          <b>Glisser</b> : déplacer un point<br>
+          <b>Clic droit</b> : supprimer
+        </div>
+      </div>
+
+      <!-- Prévisualisation animation -->
+      <div class="pm-anim-preview">
+        <div class="pmsec">Aperçu anim.</div>
+        <canvas id="pe-anim-canvas" width="32" height="32"></canvas>
+        <div class="pm-anim-controls">
+          <button id="pe-anim-play" onclick="startAnimPreview()" title="Lancer/Arrêter">▶</button>
+          <input id="pe-fps" type="number" value="8" min="1" max="60" title="FPS" placeholder="FPS">
+          <span style="font-size:9px;color:var(--dim)">fps</span>
+        </div>
+      </div>
+
+    </div><!-- /pmr -->
+
+  </div><!-- /pmbody -->
+
+  <!-- Footer -->
+  <div class="pmfoot">
+    <button class="btn btnc" onclick="closePx()">Annuler</button>
+    <div style="flex:1"></div>
+    <span style="font-size:10px;color:var(--dim)">
+      <span id="pe-frame-count-foot"></span>
+    </span>
+    <button class="btn btnp" onclick="applyPe()">✓ Appliquer au sprite</button>
+  </div>
+
+</div><!-- /pxmod -->
+
+<!-- ================================================================
+     DIALOGS
+================================================================ -->
+<!-- Variable -->
+<div class="dlg" id="dlg-v">
+  <div class="dh">Nouvelle Variable</div>
+  <div class="db">
+    <div class="pr"><div class="pl">Nom</div><input class="pi" id="dv-n" value="score"></div>
+    <div class="pr" style="margin-top:8px"><div class="pl">Type</div>
+      <select class="pi" id="dv-t"><option>number</option><option>string</option><option>boolean</option></select>
+    </div>
+    <div class="pr" style="margin-top:8px"><div class="pl">Valeur init.</div><input class="pi" id="dv-v" value="0"></div>
+  </div>
+  <div class="df">
+    <button class="btn btnc" onclick="closeDlg()">Annuler</button>
+    <button class="btn btnp" onclick="confVar()">Créer</button>
+  </div>
+</div>
+
+<!-- Timer -->
+<div class="dlg" id="dlg-t">
+  <div class="dh">Nouveau Timer</div>
+  <div class="db">
+    <div class="pr"><div class="pl">Nom</div><input class="pi" id="dt-n" value="timer1"></div>
+    <div class="pr" style="margin-top:8px"><div class="pl">Durée (ms)</div><input class="pi" type="number" id="dt-d" value="3000"></div>
+    <div class="pr" style="margin-top:8px"><div class="pl">Répéter</div>
+      <select class="pi" id="dt-r"><option value="once">Une fois</option><option value="loop">En boucle</option></select>
+    </div>
+  </div>
+  <div class="df">
+    <button class="btn btnc" onclick="closeDlg()">Annuler</button>
+    <button class="btn btnp" onclick="confTmr()">Créer</button>
+  </div>
+</div>
+
+<!-- Condition / Action -->
+<div class="dlg" id="dlg-e" style="min-width:600px;max-width:760px;width:96vw;">
+  <div class="dh" id="dlg-e-title">Ajouter</div>
+  <div class="db" id="dlg-e-body" style="padding:0;"></div>
+  <div class="df">
+    <button class="btn btnc" onclick="closeDlg()">Annuler</button>
+    <button class="btn btnp" id="dlg-e-ok">Ajouter</button>
+  </div>
+</div>
+
+<!-- Behavior picker -->
+<div class="dlg" id="dlg-beh" style="min-width:480px;">
+  <div class="dh">Ajouter un Behavior</div>
+  <div id="bpick-grid"></div>
+  <div class="df"><button class="btn btnc" onclick="closeDlg()">Annuler</button></div>
+</div>
+
+<!-- Ajout objet (double-clic canvas) -->
+<div class="dlg" id="dlg-addobj" style="min-width:420px;">
+  <div class="dh">Ajouter un objet</div>
+  <div id="dlg-addobj-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px;"></div>
+  <div class="df"><button class="btn btnc" onclick="closeDlg()">Annuler</button></div>
+</div>
+
+<!-- ================================================================
+     MENU CONTEXTUEL
+================================================================ -->
+<div id="ctx">
+  <div class="ci" id="ctx-edit" onclick="ctxEdit()">✏️ Éditer Pixel Art</div>
+  <div class="ci" onclick="ctxDup()">⧉ Dupliquer</div>
+  <div class="ci" onclick="ctxRename()">✏ Renommer</div>
+  <div class="csep"></div>
+  <div class="ci" onclick="ctxBeh()">⚙️ Behaviors…</div>
+  <div class="csep"></div>
+  <div class="ci" onclick="ctxZ(-1)">⬇ Envoyer derrière</div>
+  <div class="ci" onclick="ctxZ(1)">⬆ Mettre devant</div>
+  <div class="csep"></div>
+  <div class="ci d" onclick="ctxDel()">🗑 Supprimer</div>
+</div>
+
+<!-- ================================================================
+     MENU CONTEXTUEL FEUILLE D'ÉVÉNEMENTS
+================================================================ -->
+<div id="ev-ctx">
+  <div class="ci" onclick="evCtxCopy()">📋 Copier</div>
+  <div class="ci" onclick="evCtxCut()">✂️ Couper</div>
+  <div class="ci" onclick="evCtxDup()">⧉ Dupliquer</div>
+  <div class="csep"></div>
+  <div class="ci" id="ev-ctx-paste" onclick="evCtxPaste()">📌 Coller avant</div>
+  <div class="csep"></div>
+  <div class="ci d" onclick="evCtxDel()">🗑 Supprimer</div>
+</div>
+
+<!-- ================================================================
+     OVERLAY JEU
+================================================================ -->
+<div id="runov">
+  <div id="runbar">
+    <span style="font-family:var(--font2);font-weight:800;font-size:14px;color:#fff">▶ Prévisualisation</span>
+    <span id="rfps" style="color:var(--dim);margin-left:8px;"></span>
+    <div style="flex:1"></div>
+    <button class="tb" onclick="restartGame()" title="Recommencer depuis le début">↺ Rejouer</button>
+    <button class="tb stop" onclick="stopGame()">✕ Arrêter</button>
+  </div>
+  <canvas id="runcvs" width="800" height="500"></canvas>
+</div>
+
+<!-- ================================================================
+     SCRIPTS — ordre de chargement important
+     1. state.js     : données globales (doit être en premier)
+     2. ui.js        : navigation, dialogs, thème
+     3. objects.js   : CRUD objets, propriétés, behaviors
+     4. canvas.js    : rendu éditeur, interactions souris
+     5. variables-timers.js
+     6. events.js    : feuille d'événements
+     7. pixelart.js  : éditeur pixel art
+     8. runtime.js   : moteur de jeu
+     9. project.js   : sauvegarde/chargement
+================================================================ -->
+<script src="js/state.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/objects.js"></script>
+<script src="js/canvas.js"></script>
+<script src="js/variables-timers.js"></script>
+<script src="js/events.js"></script>
+<script src="js/pixelart.js"></script>
+<script src="js/runtime.js"></script>
+<script src="js/project.js"></script>
+
+<!-- Démo de démarrage -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const s1 = addFromLib('sprite', 80, 100);  objects.find(o => o.id === s1).color = '#5b8fff';
+  const lb = addFromLib('label', 10, 10);
+  Object.assign(objects.find(o => o.id === lb), { text:'Score: 0', fontColor:'#000000', fontSize:16 });
+
+  variables.push({ name:'score', type:'number', value:0 });
+  //timers.push({ name:'gameClock', duration:5000, repeat:'loop', elapsed:0, running:false });
+
+  renderVars(); renderTmrs(); renderEvs(); renderSceneList(); renderCvs(); updSt();
+  selId = null; showProps(null);
+
+  const hint = document.getElementById('canvas-hint');
+  hint.style.opacity = '1';
+  setTimeout(() => { hint.style.transition = 'opacity 2s'; hint.style.opacity = '0'; }, 4000);
+});
+</script>
+
+</body>
+</html>
